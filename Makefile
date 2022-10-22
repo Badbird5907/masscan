@@ -3,17 +3,17 @@
 # submit a pull request on github.
 ifeq ($(CC),)
 ifneq (, $(shell which clang))
-CC = clang
+CC = gcc
 else ifneq (, $(shell which gcc))
 CC = gcc
 else
-CC = cc
+CC = gcc
 endif
 endif
 
 PREFIX ?= /usr
 BINDIR ?= $(PREFIX)/bin
-SYS := $(shell $(CC) -dumpmachine)
+SYS := mingw32
 GITVER := $(shell git describe --tags)
 INSTALL_DATA := -pDm755
 
@@ -27,12 +27,12 @@ endif
 # works on the bajillion of different Linux environments
 ifneq (, $(findstring linux, $(SYS)))
 ifneq (, $(findstring musl, $(SYS)))
-LIBS = 
+LIBS =
 else
 LIBS = -lm -lrt -ldl -lpthread
 endif
 INCLUDES =
-FLAGS2 = 
+FLAGS2 =
 endif
 
 # MAC OS X
@@ -40,9 +40,9 @@ endif
 # my regularly regression-test environment. That means at any point
 # in time, something might be minorly broken in Mac OS X.
 ifneq (, $(findstring darwin, $(SYS)))
-LIBS = -lm 
+LIBS = -lm
 INCLUDES = -I.
-FLAGS2 = 
+FLAGS2 =
 INSTALL_DATA = -pm755
 endif
 
@@ -55,7 +55,8 @@ endif
 ifneq (, $(findstring mingw, $(SYS)))
 INCLUDES = -Ivs10/include
 LIBS = -L vs10/lib -lIPHLPAPI -lWs2_32
-FLAGS2 = -march=i686
+#FLAGS2 = -march=i686
+FLAGS2 =
 endif
 
 # Cygwin
@@ -64,15 +65,15 @@ endif
 # head with a hammer and want to feel a different sort of pain.
 ifneq (, $(findstring cygwin, $(SYS)))
 INCLUDES = -I.
-LIBS = 
-FLAGS2 = 
+LIBS =
+FLAGS2 =
 endif
 
 # OpenBSD
 ifneq (, $(findstring openbsd, $(SYS)))
 LIBS = -lm -lpthread
 INCLUDES = -I.
-FLAGS2 = 
+FLAGS2 =
 endif
 
 # FreeBSD
@@ -90,15 +91,15 @@ FLAGS2 =
 endif
 
 
-DEFINES = 
+DEFINES =
 CFLAGS = -g -ggdb $(FLAGS2) $(INCLUDES) $(DEFINES) -Wall -O2
 .SUFFIXES: .c .cpp
 
-all: bin/masscan 
+all: bin/masscan
 
 
 tmp/main-conf.o: src/main-conf.c src/*.h
-	$(CC) $(CFLAGS) -c $< -o $@ -DGIT=\"$(GITVER)\"
+	gcc $(CFLAGS) -c $< -o $@ -DGIT=\"$(GITVER)\"
 
 
 # just compile everything in the 'src' directory. Using this technique
@@ -106,15 +107,15 @@ tmp/main-conf.o: src/main-conf.c src/*.h
 # the program crashes unexpectedly, 'make clean' then 'make' fixes the
 # problem that a .h file was out of date
 tmp/%.o: src/%.c src/*.h
-	$(CC) $(CFLAGS) -c $< -o $@
+	gcc $(CFLAGS) -c $< -o $@
 
 
 SRC = $(sort $(wildcard src/*.c))
-OBJ = $(addprefix tmp/, $(notdir $(addsuffix .o, $(basename $(SRC))))) 
+OBJ = $(addprefix tmp/, $(notdir $(addsuffix .o, $(basename $(SRC)))))
 
 
 bin/masscan: $(OBJ)
-	$(CC) $(CFLAGS) -o $@ $(OBJ) $(LDFLAGS) $(LIBS)
+	gcc $(CFLAGS) -o $@ $(OBJ) $(LDFLAGS) $(LIBS)
 
 clean:
 	rm -f tmp/*.o
@@ -127,5 +128,5 @@ test: regress
 
 install: bin/masscan
 	install $(INSTALL_DATA) bin/masscan $(DESTDIR)$(BINDIR)/masscan
-	
+
 default: bin/masscan
