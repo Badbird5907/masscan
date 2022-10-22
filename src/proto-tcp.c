@@ -1262,7 +1262,7 @@ application(struct TCP_ConnectionTable *tcpcon,
         case App_ReceiveHello:
             if (action == APP_RECV_TIMEOUT) {
                 struct ProtocolParserStream *stream = banner1->payloads.tcp[tcb->port_them];
-                
+
                 if (stream) {
                     struct InteractiveData more = {0};
                     unsigned ctrl = 0;

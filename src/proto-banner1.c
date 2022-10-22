@@ -18,6 +18,7 @@
 #include "proto-pop3.h"
 #include "proto-vnc.h"
 #include "proto-memcached.h"
+#include "proto-minecraft.h"
 #include "masscan-app.h"
 #include "scripting.h"
 #include "versioning.h"
@@ -26,8 +27,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stddef.h>
-
-
 
 struct Patterns patterns[] = {
     {"\x00\x00" "**" "\xff" "SMB", 8, PROTO_SMB, SMACK_ANCHOR_BEGIN | SMACK_WILDCARDS, 0},
@@ -119,7 +118,6 @@ banner1_parse(
     unsigned offset = 0;
     unsigned proto;
 
-
     switch (tcb_state->app_proto) {
     case PROTO_NONE:
     case PROTO_HEUR:
@@ -129,8 +127,11 @@ banner1_parse(
                         px, &offset, (unsigned)length);
         if (x != SMACK_NOT_FOUND)
             proto = patterns[x].id;
+        else if(tcb_state->port == 25565)
+            proto = PROTO_MINECRAFT; /* KLUDGE: I don't know how else to recognize Minecraft packets */
         else
             proto = 0xFFFFFFFF;
+
         if (proto != 0xFFFFFFFF
             && !(proto == PROTO_SSL3 && !tcb_state->is_sent_sslhello)) {
             unsigned i;
@@ -242,6 +243,15 @@ banner1_parse(
                             px, length,
                             banout,
                             more);
+        break;
+    case PROTO_MINECRAFT: 
+        banner_minecraft.parse(
+                        banner1,
+                        banner1->http_fields,
+                        tcb_state,
+                        px, length,
+                        banout,
+                        more);
         break;
     case PROTO_HTTP:
         banner_http.parse(
@@ -364,6 +374,7 @@ banner1_create(void)
     b->payloads.tcp[11211] = (void*)&banner_memcached;
     b->payloads.tcp[23] = (void*)&banner_telnet;
     b->payloads.tcp[3389] = (void*)&banner_rdp;
+    b->payloads.tcp[25565] = (void*)&banner_minecraft; 
     
     /* 
      * This goes down the list of all the TCP protocol handlers and initializes
@@ -382,6 +393,7 @@ banner1_create(void)
     banner_telnet.init(b);
     banner_rdp.init(b);
     banner_vnc.init(b);
+    banner_minecraft.init(b);
     
     /* scripting/versioning come after the rest */
     banner_scripting.init(b);
